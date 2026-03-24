@@ -1,0 +1,16 @@
+# Core framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Database
+sqlalchemy[asyncio]>=2.0.0
+asyncpg>=0.29.0
+psycopg2-binary>=2.9.0
+
+# Redis
+redis[asyncio]>=5.0.0
+
+# HTTP client
+httpx>=0.26.0
