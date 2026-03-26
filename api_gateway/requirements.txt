@@ -19,3 +19,6 @@ cryptography>=42.0.0
 
 # Utilities
 python-multipart>=0.0.6
+
+# Playwright for real execution
+playwright>=1.42.0

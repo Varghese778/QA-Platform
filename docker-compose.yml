@@ -95,7 +95,7 @@ services:
       AGENT_MEMORY_LAYER_URL: http://memory-layer:8000
       AGENT_DEBUG: "false"
       AGENT_LLM_PROVIDER: "vertex-ai"
-      AGENT_LLM_DEFAULT_MODEL: "gemini-1.5-flash"
+      AGENT_LLM_DEFAULT_MODEL: "gemini-2.5-flash"
       AGENT_GCP_PROJECT_ID: "sightbridge-hackathon-2"
       AGENT_GCP_LOCATION: "us-central1"
       AGENT_GOOGLE_APPLICATION_CREDENTIALS: "/app/application_default_credentials.json"

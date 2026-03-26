@@ -64,6 +64,11 @@ export default function TestCaseCard({ testCase, expanded, onToggle }: TestCaseC
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {testCase.execution_time && (
+            <span className="text-xs text-gray-500 font-mono">
+              {testCase.execution_time}ms
+            </span>
+          )}
           <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getStatusBadgeClasses(testCase.status)}`}>
             {testCase.status}
           </span>
@@ -113,10 +118,37 @@ export default function TestCaseCard({ testCase, expanded, onToggle }: TestCaseC
           </div>
 
           {/* Failure Reason (if failed) */}
-          {testCase.status === 'FAIL' && testCase.failure_reason && (
+          {(testCase.status === 'FAIL' || testCase.error_trace) && (
             <div className="bg-red-50 border-l-4 border-red-400 p-3 rounded">
-              <h5 className="font-semibold text-red-800 mb-1">Failure Reason:</h5>
-              <p className="text-sm text-red-700">{testCase.failure_reason}</p>
+              <h5 className="font-semibold text-red-800 mb-1">Execution Error:</h5>
+              <p className="text-sm text-red-700 font-mono whitespace-pre-wrap">
+                {testCase.error_trace || testCase.failure_reason}
+              </p>
+            </div>
+          )}
+
+          {/* Screenshot Evidence */}
+          {testCase.screenshot && (
+            <div className="mt-4">
+              <h5 className="font-semibold text-gray-700 mb-2">Execution Evidence:</h5>
+              <div className="border border-gray-300 rounded-lg overflow-hidden bg-white">
+                <img 
+                  src={`data:image/png;base64,${testCase.screenshot}`} 
+                  alt="Test Execution Screenshot" 
+                  className="w-full h-auto max-h-[500px] object-contain cursor-zoom-in"
+                  onClick={(e) => {
+                    const img = e.currentTarget;
+                    if (img.style.maxHeight === 'none') {
+                      img.style.maxHeight = '500px';
+                    } else {
+                      img.style.maxHeight = 'none';
+                    }
+                  }}
+                />
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest text-center">
+                Real-time Playwright Capture
+              </p>
             </div>
           )}
         </div>

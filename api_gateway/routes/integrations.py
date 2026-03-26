@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 import httpx
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
@@ -199,7 +199,7 @@ async def get_integration(integration_id: str, request: Request):
 
 
 @router.post("/jira/import")
-async def import_from_jira(request: Request):
+async def import_from_jira(request: Request, background_tasks: BackgroundTasks):
     """
     Import a user story from Jira by issue key.
     
@@ -287,7 +287,7 @@ async def import_from_jira(request: Request):
     user_story = f"{issue.get('description', '')}\n\nAcceptance Criteria:\n{acceptance_text}"
 
     # Create a job from the imported story
-    from api_gateway.routes.demo import DEMO_JOBS, _create_fallback_demo_job
+    from api_gateway.routes.demo import DEMO_JOBS, _create_fallback_demo_job, _generate_real_tests_task
 
     job_data = {
         "project_id": body.get("project_id", "demo-project-001"),
@@ -310,6 +310,9 @@ async def import_from_jira(request: Request):
     }
 
     DEMO_JOBS.insert(0, new_job)
+    
+    # Start real AI generation and browser execution in the background
+    background_tasks.add_task(_generate_real_tests_task, new_job, job_data)
 
     logger.info(f"Imported Jira issue {issue_key} as job {new_job['job_id']}")
 

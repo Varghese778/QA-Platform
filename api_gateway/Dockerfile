@@ -55,6 +55,14 @@ ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONHASHSEED=random \
     PYTHONPATH=/app
 
+# Set Playwright browsers path
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# Install Playwright browsers and their system dependencies
+# Done BEFORE copying code so changes in code don't trigger a redownload
+RUN playwright install chromium --with-deps
+RUN chmod -R 777 /ms-playwright
+
 # Copy application code to the package directory
 COPY . /app/api_gateway/
 

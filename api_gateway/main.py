@@ -42,10 +42,50 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
+
+
+
+def run_demo_server():
+    """Starts a simple HTTP server to host the demo app on port 5000."""
+    import os
+    import http.server
+    import socketserver
+    
+    # Locate the demo_app directory
+    # In container: /app/api_gateway/demo_app
+    # In local: c:\Users\shari\OneDrive\Desktop\QA-Platform\api_gateway\demo_app
+    possible_paths = [
+        "/app/api_gateway/demo_app",
+        "api_gateway/demo_app",
+        "demo_app"
+    ]
+    demo_path = None
+    for p in possible_paths:
+        if os.path.exists(p):
+            demo_path = p
+            break
+            
+    if not demo_path:
+        print(f"FAILED to start demo server: demo_app directory not found among {possible_paths}")
+        return
+
+    os.chdir(demo_path)
+    handler = http.server.SimpleHTTPRequestHandler
+    
+    # Allow port reuse to avoid 'address already in use' errors on reload
+    socketserver.TCPServer.allow_reuse_address = True
+    with socketserver.TCPServer(("", 5000), handler) as httpd:
+        print(f"Serving demo app at http://localhost:5000 from {demo_path}")
+        httpd.serve_forever()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
+    import threading
+    threading.Thread(target=run_demo_server, daemon=True).start()
+    
     logger.info("Starting API Gateway...")
 
     # Initialize JWT validator (fetches JWKS)

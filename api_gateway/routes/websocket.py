@@ -77,15 +77,17 @@ async def job_status_websocket(
     # Accept WebSocket connection
     await websocket.accept()
 
-    # Connect to upstream WebSocket
-    upstream_url = f"{settings.async_service_url.replace('http', 'ws')}/internal/ws/jobs/{job_id}"
+    # Connect to upstream WebSocket (Use valid UUID format for project_id to avoid 403/422 rejection)
+    project_id = "00000000-0000-0000-0000-000000000001"
+    upstream_url = f"{settings.async_service_url.replace('http', 'ws')}/internal/v1/ws/v1/jobs/{job_id}/status?project_id={project_id}"
 
     try:
         async with websockets.connect(
             upstream_url,
             additional_headers={
                 "X-Caller-ID": caller_id,
-                "X-Request-ID": str(UUID(int=0)),  # Generate proper ID in production
+                "X-Request-ID": str(UUID(int=0)),
+                "Origin": "http://api-gateway:8080", # Ensure internal origin is accepted
             },
         ) as upstream_ws:
             # Bidirectional proxy

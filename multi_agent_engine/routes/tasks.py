@@ -209,8 +209,9 @@ You MUST respond with valid JSON matching exactly this schema:
             "steps": [
                 {
                     "step_number": 1,
-                    "action": "Description of action",
-                    "expected_result": "Description of expected result"
+                    "action": "click|input|verify",
+                    "target": "CSS_SELECTOR",
+                    "value": "string (for input actions)"
                 }
             ],
             "expected_result": "Overall expected result",
@@ -219,10 +220,17 @@ You MUST respond with valid JSON matching exactly this schema:
     ]
 }
 
+Target App Context (http://localhost:5000):
+- The app is a Login Portal.
+- Elements: `#email` (input), `#password` (input), `#login-btn` (button), `#message` (div for feedback).
+- VALID Credentials: Email: `admin@example.com`, Password: `password123`.
+- Expected: On success, `#message` contains "Login successful" and a Logout button appears.
+- On failure, `#message` contains "Invalid credentials".
+
 Rules:
-- Generate exactly 5-8 high-quality tests
-- Include functional, edge case, and negative tests
-- Make steps highly specific to the user story provided
+- Generate 5-8 high-quality tests.
+- For `action`: use ONLY "click", "input", or "verify".
+- For `target`: use ONLY the valid CSS selectors provided above.
 - Return ONLY valid JSON, no markdown fences or other text.
 """
     

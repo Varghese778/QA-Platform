@@ -11,5 +11,5 @@ redis>=5.0.0
 httpx>=0.26.0
 
 # Google Cloud Vertex AI
-google-cloud-aiplatform>=1.38.0
+google-cloud-aiplatform>=1.70.0
 google-auth>=2.23.0

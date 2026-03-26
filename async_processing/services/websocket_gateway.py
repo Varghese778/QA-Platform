@@ -43,16 +43,20 @@ class ConnectionRegistry:
         session_id = uuid4()
 
         # Create session record
-        session = WebSocketSession(
-            session_id=session_id,
-            job_id=job_id,
-            project_id=project_id,
-            client_id=client_id,
-            status="CONNECTED",
-        )
-
-        self.db.add(session)
-        await self.db.flush()
+        try:
+            session = WebSocketSession(
+                session_id=session_id,
+                job_id=job_id,
+                project_id=project_id,
+                client_id=client_id,
+                status="CONNECTED",
+            )
+            self.db.add(session)
+            await self.db.flush()
+        except Exception as e:
+            # For demo jobs not in the persistent DB, we allow in-memory only connection
+            logger.warning(f"Could not persist WebSocket session to DB (likely demo job): {e}")
+            await self.db.rollback()
 
         # Add to in-memory registry
         if job_id not in self.connections:

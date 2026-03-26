@@ -51,6 +51,9 @@ export interface TestCase {
   tags: string[]
   status: TestStatus
   failure_reason?: string
+  screenshot?: string // Base64 screenshot
+  execution_time?: number // ms
+  error_trace?: string
 }
 
 export interface ReportSummary {
