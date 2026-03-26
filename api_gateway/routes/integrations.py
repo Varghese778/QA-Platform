@@ -380,8 +380,10 @@ async def list_jira_issues(request: Request):
     JIRA_TOKEN = os.environ.get("AGENT_JIRA_TOKEN")
     
     issues = []
+    use_mock_fallback = True  # Only use mock if real Jira is not configured
     
     if JIRA_URL and JIRA_USER and JIRA_TOKEN:
+        use_mock_fallback = False  # Real Jira is configured, don't use mock
         try:
             auth = base64.b64encode(f"{JIRA_USER}:{JIRA_TOKEN}".encode()).decode()
             async with httpx.AsyncClient() as client:
@@ -408,8 +410,8 @@ async def list_jira_issues(request: Request):
         except Exception as e:
             logger.error(f"Failed to list issues from Jira API: {e}")
             
-    # Fallback to mock data
-    if not issues:
+    # Only use mock data if Jira is not configured
+    if use_mock_fallback and not issues:
         issues = [
             {
                 "key": v["key"],

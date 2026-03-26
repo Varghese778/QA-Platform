@@ -343,12 +343,16 @@ async def _broadcast_demo_status(job):
     """Helper to notify async-processing of a demo job update for real-time UI."""
     try:
         async with httpx.AsyncClient() as client:
-            # Broadcast the full job object as event to trigger WebSocket updates
-            # async-processing will route this through the WebSocket gateway
+            # Convert demo project ID to UUID format (async-processing requires valid UUID)
+            import uuid
+            demo_project_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, job["project_id"]))
+            
+            # Payload matching async-processing schema requirements
             payload = {
                 "job_id": job["job_id"],
-                "project_id": job["project_id"],
-                "event_type": "JOB_PROGRESS_UPDATE",
+                "project_id": demo_project_uuid,  # Must be valid UUID
+                "event_type": "JOB_PROGRESSED",   # Must be from enum
+                "source_service": "api-gateway",  # Required field
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "status": job["status"],
                 "stages": job.get("stages", []),

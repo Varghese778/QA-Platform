@@ -1,36 +1,63 @@
 # =============================================================================
-# QA PLATFORM - GIT IGNORE
+# QA PLATFORM - GIT IGNORE CONFIGURATION
+# =============================================================================
+# Comprehensive .gitignore for QA Platform microservices architecture
+# Last Updated: March 26, 2026 - Codebase Audit Review
+# Scope: 9 Backend Services (Python) + Frontend (React/TypeScript) + Infrastructure
 # =============================================================================
 
 # =============================================================================
-# ENVIRONMENT & SECRETS
+# ENVIRONMENT & SECRETS (CRITICAL - NEVER COMMIT)
 # =============================================================================
 .env
 .env.local
 .env.*.local
 .env.production
+.env.staging
+.env.development
 *.pem
 *.key
 *.crt
+*.key.json
+*.rsa
 secrets/
 credentials/
+.secrets/
+.credentials/
+config.secret.yaml
+config.secret.yml
+local.env
 
-# GCP Secrets
+# GCP Secrets & Cloud Credentials
 application_default_credentials.json
 *.json.key
 *gcp-creds*.json
+gcp-*.json
+*google-*.json
+
+# AWS Credentials
+.aws/
+*.awscreds
+aws-credentials.json
+
+# Azure Credentials
+.azure/
 
 # Temporary Debug Scripts
 jira_resp.json
+debug_*.json
+temp_*.json
 
 # =============================================================================
-# PYTHON
+# PYTHON (All Backend Services)
 # =============================================================================
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
+*.pyo
 
 # C extensions
 *.so
@@ -54,10 +81,15 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+pip-wheel-metadata/
 
 # PyInstaller
 *.manifest
 *.spec
+build/
+dist/
+*.exe
+*.app
 
 # Unit test / coverage reports
 htmlcov/
@@ -69,32 +101,51 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
-*.log
-.pytest_cache/
+*.py,cover
 .hypothesis/
+.pytest_cache/
+pytest-results/
+test-results/
+coverage-reports/
+.unittest.xml
+*.cover
 
-# Virtual environments
+# Virtual environments (all Python environment managers)
 venv/
 env/
 ENV/
 .venv/
 .virtualenv/
+.env_backup/
 pip-log.txt
 pip-delete-this-directory.txt
+pyvenv.cfg
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Alternative Python environment managers
+.pipenv/
+pipenv-lock.txt
+.poetry/
+poetry.lock
+.venv*/
+.conda/
+conda-lock.yml
+.pyenv/
 
-# IPython
+# Jupyter Notebook & IPython
+.ipynb_checkpoints/
+*.ipynb_checkpoints
 profile_default/
 ipython_config.py
+.ipython/
 
 # pyenv
 .python-version
+.pyenv-version
 
-# Celery
+# Celery beat
 celerybeat-schedule
 celerybeat.pid
+celerybeat.log
 
 # SageMath parsed files
 *.sage.py
@@ -106,10 +157,14 @@ celerybeat.pid
 # Rope project settings
 .ropeproject
 
-# mypy
+# mkdocs documentation
+site/
+
+# mypy type checker
 .mypy_cache/
 .dmypy.json
 dmypy.json
+.mypypath.ini
 
 # Pyre type checker
 .pyre/
@@ -120,96 +175,160 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+# Black code formatter
+.black
+
+# isort
+.isort.cfg
+
+# flake8
+.flake8
+
+# pylint
+.pylintrc
+pylint_report/
+
 # =============================================================================
-# NODE.JS / REACT / FRONTEND
+# NODE.JS / REACT / FRONTEND (All Frontend Components)
 # =============================================================================
 
 # Dependencies
 node_modules/
 jspm_packages/
+npm-shrinkwrap.json
+yarn.lock
+package-lock.json
+pnpm-lock.yaml
 
 # Build outputs
 dist/
 build/
-.vite/
 out/
-
-# Cache
+.vite/
+.next/
+.nuxt/
+coverage/
 .cache/
+.vercel/
+
+# Cache files
 .npm/
 .yarn/
-.pnp.*
+.pnp
+.pnp.js
 .yarn-integrity
+*.tsbuildinfo
+.eslintcache
 
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# Environment
+# Environment files
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*.local
 
-# TypeScript
-*.tsbuildinfo
+# Generated TypeScript
+*.d.ts
+tsconfig.json.bak
+tsconfig.*.json.bak
 
-# Next.js
-.next/
+# TurboRepo
+.turbo/
 
 # =============================================================================
-# DOCKER
+# DOCKER & CONTAINER ORCHESTRATION
 # =============================================================================
 
-# Docker volumes (if mapped locally)
+# Docker volumes (local data - not code)
 docker-data/
 postgres-data/
 redis-data/
+mongodb-data/
+elasticsearch-data/
+volumes/
+data/
 
-# Docker Compose overrides
+# Docker image artifacts
+*.tar
+*.tar.gz
+docker-image-*.txt
+
+# Docker Compose overrides & local configs
 docker-compose.override.yml
+docker-compose.local.yml
+.docker/
+
+# Kubernetes manifests (local development)
+k8s-local/
+helm-values-local.yaml
 
 # =============================================================================
-# DATABASES
+# DATABASES & DATA STORAGE
 # =============================================================================
 
 # SQLite
 *.db
 *.sqlite
 *.sqlite3
+*.db-journal
 
 # PostgreSQL
 *.sql.backup
 *.dump
+*.pgdump
+pgdata/
+postgresql-data/
+
+# MySQL
+*.ibd
+mysql-data/
+
+# MongoDB
+mongodb-data/
+*.bson
+
+# Redis
+dump.rdb
+redis-data/
 
 # =============================================================================
-# IDE & EDITORS
+# IDE & EDITORS (ALL DEVELOPMENT ENVIRONMENTS)
 # =============================================================================
 
 # Visual Studio Code
 .vscode/
+.vscode-server/
 *.code-workspace
 .history/
+.vsconfig
+.vscodeignore
 
-# JetBrains IDEs (PyCharm, IntelliJ, WebStorm)
+# JetBrains IDEs (PyCharm, IntelliJ, IDEA, WebStorm, Rider, AppCode)
 .idea/
 *.iml
 *.ipr
 *.iws
-out/
+*.iws.xml
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+local.properties
+*.sublime-project
+*.sublime-workspace
 
 # Sublime Text
 *.sublime-project
 *.sublime-workspace
+.sublimeignore
 
 # Vim
 *.swp
 *.swo
 *~
 .vim/
+Session.vim
 
 # Emacs
 *~
@@ -217,12 +336,19 @@ out/
 /.emacs.desktop
 /.emacs.desktop.lock
 *.elc
-auto-save-list
+auto-save-list/
 tramp
 .\#*
 
+# Atom
+.atom/
+.atomignore
+
+# Nano
+.nano_history
+
 # =============================================================================
-# OPERATING SYSTEM
+# OPERATING SYSTEM GENERATED FILES
 # =============================================================================
 
 # macOS
@@ -240,9 +366,10 @@ Icon
 .com.apple.timemachine.donotpresent
 .AppleDB
 .AppleDesktop
-Network Trash Folder
-Temporary Items
+Network\ Trash\ Folder
+Temporary\ Items
 .apdisk
+.quarantine
 
 # Windows
 Thumbs.db
@@ -258,45 +385,198 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 *.lnk
+*.scf
+.windows/
 
 # Linux
 *~
 .directory
 .Trash-*
 .nfs*
+.gvfs*
 
 # =============================================================================
-# LOGS & TEMPORARY FILES
+# LOGS, TEMPORARY FILES & BUILD ARTIFACTS
 # =============================================================================
 
+# Application logs
 *.log
+*.log.*
 logs/
+log/
+*.log.gz
+*.log.zip
+debug.log
+error.log
+
+# System logs
+syslog
+access.log
+error.log
+
+# Temporary files
 *.tmp
 *.temp
 tmp/
 temp/
+tempfile*
+.tmp/
+
+# Process IDs & execution files
 *.pid
-*.seed
 *.pid.lock
+*.seed
+
+# Backup files
+*.bak
+*.backup
+*.swp
+*~
+.backup/
+
+# macOS temporary
+.com.apple.*.lock
+.com.apple.*.swp
 
 # =============================================================================
-# PROJECT-SPECIFIC
+# PROJECT-SPECIFIC QA PLATFORM ARTIFACTS
 # =============================================================================
 
-# PRDs and Documentation Drafts
-PRDs/
+# Product Requirements Documents (drafts)
+PRDs/*.draft.md
+PRDs/*.wip.md
+PRDs/.draft/
+/PRDs
 
-# Artifact storage (local development)
+# Local artifact storage & test data
 artifact_storage/storage/
 storage/artifacts/
+storage/temp/
+storage/cache/
+artifacts-local/
+test-data/
+mock-data/
 
-# Alembic migrations (keep structure, but ignore auto-generated)
-# **/alembic/versions/*.py
-# !**/alembic/versions/__init__.py
+# Alembic migrations (auto-generated versions only)
+**/alembic/versions/*.py
+!**/alembic/versions/__init__.py
+alembic-local/
 
-# Test artifacts
+# Test report outputs
 test-results/
+test-reports/
+test-artifacts/
+junit-results.xml
+test-output.log
 coverage-reports/
+.coverage-*
+
+# Build & Distribution
+dist/
+build/
+*.whl
+*.egg
+
+# Playwright & Browser Automation
+test-results/
+playwright-reports/
+.pwdebug
+artifacts/
+videos/
+screenshots/
+
+# API Documentation (auto-generated)
+docs/api/generated/
+redoc-spec.json
+swagger-spec.json
+openapi-spec.json
+
+# Performance & Load Test Results
+performance/
+load-test-results/
+benchmark-results/
+
+# Local development patches & diffs
+*.patch
+*.diff
+*.rej
+.merge-*
+
+# =============================================================================
+# CONTINUOUS INTEGRATION & DEPLOYMENT
+# =============================================================================
+
+# GitHub Actions
+.github/workflows/local/
+
+# GitLab CI
+.gitlab-ci-local.yml
+
+# Jenkins
+.jenkins/
+coverage-results/
+
+# Build artifacts
+target/
+.gradle/
+
+# =============================================================================
+# PACKAGE MANAGER SPECIFIC
+# =============================================================================
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Poetry
+poetry.lock
+
+# pipenv
+Pipfile.lock
+.pipenv/
+
+# pnpm
+.pnpm-debug.log
+.pnpm-debug.log.*
+
+# Yarn
+yarn-error.log
+.yarn/unplugged
+
+# npm
+npm-debug.log*
+npm-error.log*
+
+# =============================================================================
+# DOCUMENTATION & NOTES
+# =============================================================================
+
+# Markdown drafts
+*.md.tmp
+*.md.bak
+NOTES.md
+TODO.md
+WIP.md
+.notes/
+
+# Generated documentation
+docs/generated/
+docs/build/
+
+# =============================================================================
+# THIRD-PARTY & EXTERNAL INTEGRATIONS
+# =============================================================================
+
+# Credentials for external services (Jira, GitHub, etc.)
+.jira/
+.github/credentials/
+.gitlab/oauth/
+
+# External API responses (for debugging)
+*.api-response.json
+*.response.json
+debug-responses/
+
 
 # Documentation builds
 docs/_build/
