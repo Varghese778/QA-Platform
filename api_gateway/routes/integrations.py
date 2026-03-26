@@ -287,7 +287,7 @@ async def import_from_jira(request: Request, background_tasks: BackgroundTasks):
     user_story = f"{issue.get('description', '')}\n\nAcceptance Criteria:\n{acceptance_text}"
 
     # Create a job from the imported story
-    from api_gateway.routes.demo import DEMO_JOBS, _create_fallback_demo_job, _generate_real_tests_task
+    from api_gateway.routes.demo import DEMO_JOBS, _initialize_new_demo_job, _generate_real_tests_task
 
     job_data = {
         "project_id": body.get("project_id", "demo-project-001"),
@@ -300,7 +300,7 @@ async def import_from_jira(request: Request, background_tasks: BackgroundTasks):
         "environment_target": "STAGING",
     }
 
-    new_job = _create_fallback_demo_job(job_data)
+    new_job = _initialize_new_demo_job(job_data)
     new_job["source"] = {
         "type": "jira",
         "issue_key": issue_key,

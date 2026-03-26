@@ -19,6 +19,7 @@ export interface Stage {
   completed_at?: string
   agent_id?: string
   log_snippet?: string
+  details?: string[]
 }
 
 export interface JobRecord {

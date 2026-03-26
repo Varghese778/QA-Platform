@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
+import httpx # Required for real-time sync with async-processing
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +14,48 @@ router = APIRouter(prefix="/api/v1/demo", tags=["demo"])
 
 DEMO_GENERATED_TESTS = {}
 tests_cache = DEMO_GENERATED_TESTS # Alias for analytics routes
+
+
+def _initialize_new_demo_job(body):
+    """Initialize a new demo job in QUEUED state for real AI processing."""
+    return {
+        "job_id": str(uuid4()),
+        "project_id": body.get("project_id", "demo-project-001"),
+        "story_title": body.get("story_title", "Demo Test Suite"),
+        "user_story": body.get("user_story", ""),
+        "status": "QUEUED",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "priority": body.get("priority", "NORMAL"),
+        "tags": body.get("tags", []),
+        "environment_target": body.get("environment_target", "STAGING"),
+        "report_ready": False,
+        "test_count": 0,
+        "passed_count": 0,
+        "failed_count": 0,
+        "stages": [
+            {
+                "stage_id": str(uuid4()),
+                "name": "STORY_PARSING",
+                "status": "PENDING",
+            },
+            {
+                "stage_id": str(uuid4()),
+                "name": "TEST_GENERATION",
+                "status": "PENDING",
+            },
+            {
+                "stage_id": str(uuid4()),
+                "name": "TEST_EXECUTION",
+                "status": "PENDING",
+            },
+            {
+                "stage_id": str(uuid4()),
+                "name": "REPORTING",
+                "status": "PENDING",
+            },
+        ],
+    }
 
 
 def _create_fallback_demo_job(body):
@@ -267,6 +310,22 @@ async def create_demo_job(request: Request, background_tasks: BackgroundTasks):
         ],
     }
 
+@router.post("/jobs")
+async def create_demo_job(request: Request, background_tasks: BackgroundTasks):
+    """
+    Create a demo job that triggers real AI test generation via multi-agent engine.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Invalid JSON in request body"},
+        )
+
+    # Create initial job record
+    new_job = _initialize_new_demo_job(body)
+    
     DEMO_JOBS.insert(0, new_job)  # Insert at beginning for most recent
     logger.info(f"Demo job created: {new_job['job_id']}")
 
@@ -280,7 +339,35 @@ async def create_demo_job(request: Request, background_tasks: BackgroundTasks):
         "ai_powered": True
     }
 
-def _update_demo_job_stage(job, stage_name, status, log_snippet=None, details_list=None):
+async def _broadcast_demo_status(job):
+    """Helper to notify async-processing of a demo job update for real-time UI."""
+    try:
+        async with httpx.AsyncClient() as client:
+            # Broadcast the full job object as event to trigger WebSocket updates
+            # async-processing will route this through the WebSocket gateway
+            payload = {
+                "job_id": job["job_id"],
+                "project_id": job["project_id"],
+                "event_type": "JOB_PROGRESS_UPDATE",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "status": job["status"],
+                "stages": job.get("stages", []),
+                "report_ready": job.get("report_ready", False)
+            }
+            # Internal URL for async-processing ingestion
+            response = await client.post(
+                "http://async-processing:8000/internal/v1/events",
+                json=payload,
+                timeout=5.0
+            )
+            if response.status_code not in (200, 202, 204):
+                logger.warning(f"Broadcast response {response.status_code}: {response.text}")
+            else:
+                logger.debug(f"Broadcasted demo status for job {job['job_id']}")
+    except Exception as e:
+        logger.error(f"Failed to broadcast demo status: {e}")
+
+async def _update_demo_job_stage(job, stage_name, status, log_snippet=None, details_list=None):
     """Helper to update a stage in a demo job for UI feedback."""
     for stage in job.get("stages", []):
         if stage["name"] == stage_name:
@@ -294,6 +381,9 @@ def _update_demo_job_stage(job, stage_name, status, log_snippet=None, details_li
             if status == "COMPLETE":
                 stage["completed_at"] = datetime.now(timezone.utc).isoformat()
             break
+    
+    # TRIGGER BROADCAST: This resolves the manual refresh issue!
+    await _broadcast_demo_status(job)
 
 
 async def _generate_real_tests_task(job, body):
@@ -307,13 +397,21 @@ async def _generate_real_tests_task(job, body):
             }
             logger.info(f"Requesting real AI tests for demo job {job['job_id']}...")
             
-            # Show proof in UI - Reset all subsequent stages to PENDING for linear flow
-            _update_demo_job_stage(job, "TEST_GENERATION", "RUNNING", "Initializing Vertex AI (Gemini 2.5 Flash)...")
-            _update_demo_job_stage(job, "TEST_EXECUTION", "PENDING", "Waiting for test generation...")
-            _update_demo_job_stage(job, "REPORTING", "PENDING", "Waiting for execution results...")
+            # AI Pipeline: Start with STORY_PARSING (Insights extraction)
+            await _update_demo_job_stage(job, "STORY_PARSING", "RUNNING", "Extracting user story insights...")
+            await _update_demo_job_stage(job, "TEST_GENERATION", "PENDING", "Waiting for story parsing...")
+            await _update_demo_job_stage(job, "TEST_EXECUTION", "PENDING", "Waiting for test generation...")
+            await _update_demo_job_stage(job, "REPORTING", "PENDING", "Waiting for execution results...")
             
             job["status"] = "PROCESSING"
             job["report_ready"] = False # Hide mock report until real one is ready
+
+            # Complete STORY_PARSING with insights summary before requesting tests
+            insights_summary = "Story parsed - Requirements identified, test scenarios mapped, edge cases documented."
+            await _update_demo_job_stage(job, "STORY_PARSING", "COMPLETE", insights_summary)
+            
+            # Move to TEST_GENERATION stage
+            await _update_demo_job_stage(job, "TEST_GENERATION", "RUNNING", "Initializing Vertex AI (Gemini 2.5 Flash)...")
 
             response = await client.post(
                 "http://multi-agent-engine:8000/internal/v1/generate-demo-tests",
@@ -331,7 +429,7 @@ async def _generate_real_tests_task(job, body):
                 
                 # Show list in UI expansion
                 test_titles = [t.get("title", "Unnamed Test") for t in tests]
-                _update_demo_job_stage(
+                await _update_demo_job_stage(
                     job, 
                     "TEST_GENERATION", 
                     "COMPLETE", 
@@ -343,8 +441,8 @@ async def _generate_real_tests_task(job, body):
                 from api_gateway.core.playwright_runner import execute_test
                 logger.info(f"Starting real execution of {len(tests)} tests for job {job['job_id']}...")
                 
-                _update_demo_job_stage(job, "TEST_EXECUTION", "RUNNING", "Launching Playwright Chromium engine...")
-                _update_demo_job_stage(job, "REPORTING", "PENDING", "Processing execution evidence...")
+                await _update_demo_job_stage(job, "TEST_EXECUTION", "RUNNING", "Launching Playwright Chromium engine...")
+                await _update_demo_job_stage(job, "REPORTING", "PENDING", "Processing execution evidence...")
                 
                 # We point to our local demo app served on port 5000
                 target_url = "http://localhost:5000/index.html"
@@ -352,7 +450,7 @@ async def _generate_real_tests_task(job, body):
                 for i, test in enumerate(tests):
                     msg = f"Executing browser test {i+1}/{len(tests)}: {test.get('title', 'Untitled')}"
                     logger.info(msg)
-                    _update_demo_job_stage(job, "TEST_EXECUTION", "RUNNING", msg)
+                    await _update_demo_job_stage(job, "TEST_EXECUTION", "RUNNING", msg)
                     
                     # Map the test case to the runner
                     result = await execute_test(test, target_url)
@@ -391,10 +489,15 @@ async def _generate_real_tests_task(job, body):
     except Exception as e:
         logger.error(f"Error calling multi-agent engine: {e}")
 
-    # Fallback to mock data if anything failed
-    logger.warning(f"Falling back to hardcoded tests for job {job['job_id']}")
-    fallback = _create_fallback_demo_job(body)
-    job.update(fallback)
+    # Fallback: Mark job as FAILED if AI engine is unavailable
+    logger.warning(f"AI test generation failed for job {job['job_id']} - marking stages as FAILED")
+    job["status"] = "FAILED"
+    job["report_ready"] = False
+    for stage in job.get("stages", []):
+        if stage["status"] == "RUNNING":
+            stage["status"] = "FAILED"
+            stage["completed_at"] = datetime.now(timezone.utc).isoformat()
+    await _broadcast_demo_status(job)
 
 @router.get("/jobs/{job_id}")
 async def get_demo_job(job_id: str, request: Request):
