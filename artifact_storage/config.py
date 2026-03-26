@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     max_list_limit: int = 1000
 
     model_config = {
-        "env_prefix": "ARTIFACT_STORAGE_",
+        "env_prefix": "ARTIFACT_",
         "env_file": ".env",
         "extra": "ignore",
     }

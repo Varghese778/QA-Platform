@@ -166,7 +166,7 @@ class ArtifactPersister:
                 checksum_sha256=checksum,
                 source_job_id=source_job_id,
                 tags=tags or [],
-                metadata=metadata or {},
+                artifact_metadata=metadata or {},
                 expires_at=expires_at,
             )
 

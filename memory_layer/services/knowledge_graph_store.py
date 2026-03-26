@@ -65,7 +65,7 @@ class KnowledgeGraphStore:
             from_entity_id=from_entity_id,
             to_entity_id=to_entity_id,
             relationship_type=relationship_type,
-            metadata=metadata or {},
+            relationship_metadata=metadata or {},
         )
         self.db.add(relationship)
         await self.db.flush()
@@ -80,7 +80,7 @@ class KnowledgeGraphStore:
             from_entity_id=relationship.from_entity_id,
             to_entity_id=relationship.to_entity_id,
             relationship_type=relationship.relationship_type,
-            metadata=relationship.metadata,
+            metadata=relationship.relationship_metadata,
         )
 
     async def query_graph(
@@ -138,7 +138,7 @@ class KnowledgeGraphStore:
                 from_entity_id=r.from_entity_id,
                 to_entity_id=r.to_entity_id,
                 relationship_type=r.relationship_type,
-                metadata=r.metadata,
+                metadata=r.relationship_metadata,
             )
             for r in relationships
         ]

@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from memory_layer.config import get_settings
@@ -436,7 +436,7 @@ async def create_entity(
     project_id: UUID = Query(...),
     entity_type: EntityType = Query(...),
     entity_name: str = Query(...),
-    attributes: dict = Query(default=None),
+    attributes: dict = Body(default=None),
     db: AsyncSession = Depends(get_db),
 ):
     """Create an entity in the knowledge graph."""
@@ -471,7 +471,7 @@ async def create_relationship(
     from_entity_id: UUID = Query(...),
     to_entity_id: UUID = Query(...),
     relationship_type: str = Query(...),
-    metadata: dict = Query(default=None),
+    metadata: dict = Body(default=None),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a relationship in the knowledge graph."""

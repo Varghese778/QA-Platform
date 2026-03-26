@@ -14,3 +14,6 @@ redis>=5.0.0
 
 # HTTP client
 httpx>=0.26.0
+
+# Validation
+jsonschema>=4.21.0

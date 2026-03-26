@@ -27,6 +27,8 @@ from api_gateway.routes import (
     projects_router,
     uploads_router,
     websocket_router,
+    demo_router,
+    integrations_router,
 )
 from api_gateway.schemas import ErrorEnvelope
 
@@ -47,12 +49,16 @@ async def lifespan(app: FastAPI):
     logger.info("Starting API Gateway...")
 
     # Initialize JWT validator (fetches JWKS)
+    # NOTE: We do NOT crash if JWKS is unavailable — auth-service may still be starting.
+    # The JWT validator will lazy-initialize on first request via get_jwt_validator().
     try:
         jwt_validator = await get_jwt_validator()
         logger.info("JWT validator initialized")
     except Exception as e:
-        logger.error(f"Failed to initialize JWT validator: {e}")
-        raise RuntimeError("Gateway cannot start without JWKS") from e
+        logger.warning(
+            f"JWT validator initialization deferred — auth-service may not be ready yet: {e}. "
+            f"Will retry on first authenticated request."
+        )
 
     # Initialize Redis connection
     try:
@@ -185,6 +191,8 @@ app.include_router(jobs_router)
 app.include_router(projects_router)
 app.include_router(uploads_router)
 app.include_router(websocket_router)
+app.include_router(demo_router)
+app.include_router(integrations_router)
 
 
 # Root endpoint

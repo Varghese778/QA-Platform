@@ -40,7 +40,7 @@ def _create_error_response(
     message: str,
 ) -> Response:
     """Create a standard error response."""
-    from datetime import datetime
+    from datetime import datetime, timezone
     import json
 
     request.state.error_code = error_code
@@ -49,7 +49,7 @@ def _create_error_response(
         error_code=error_code,
         message=message,
         request_id=UUID(request.state.request_id),
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
     )
 
     return Response(
@@ -106,19 +106,13 @@ async def submit_job(
 
     # Forward to Orchestrator
     try:
-        response = await proxy.forward_request(
+        return await proxy.forward_request(
             service="orchestrator",
             path="/internal/v1/jobs",
             request=request,
             request_id=request.state.request_id,
             caller_id=user.user_id,
             project_id=project_id,
-        )
-        return Response(
-            content=response.body,
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            media_type="application/json",
         )
     except UpstreamTimeout:
         return _create_error_response(
@@ -179,19 +173,13 @@ async def list_jobs(
     request.state.project_id = project_id_str
 
     try:
-        response = await proxy.forward_request(
+        return await proxy.forward_request(
             service="orchestrator",
             path="/internal/v1/jobs",
             request=request,
             request_id=request.state.request_id,
             caller_id=user.user_id,
             project_id=project_id_str,
-        )
-        return Response(
-            content=response.body,
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            media_type="application/json",
         )
     except (UpstreamTimeout, ServiceUnavailable, ProxyError) as e:
         return _create_error_response(
@@ -215,18 +203,12 @@ async def get_job(
     request.state.upstream_service = "orchestrator"
 
     try:
-        response = await proxy.forward_request(
+        return await proxy.forward_request(
             service="orchestrator",
             path=f"/internal/v1/jobs/{job_id}",
             request=request,
             request_id=request.state.request_id,
             caller_id=user.user_id,
-        )
-        return Response(
-            content=response.body,
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            media_type="application/json",
         )
     except (UpstreamTimeout, ServiceUnavailable, ProxyError) as e:
         return _create_error_response(
@@ -245,19 +227,20 @@ async def cancel_job(
     Cancel a queued job.
 
     Requires QA_ENGINEER role (own jobs) or PROJECT_ADMIN/ORG_ADMIN (any job).
+    Note: Orchestrator expects POST to /cancel, so we override the method and path.
     """
     request.state.upstream_service = "orchestrator"
 
     try:
-        response = await proxy.forward_request(
+        response = await proxy.forward(
             service="orchestrator",
-            path=f"/internal/v1/jobs/{job_id}",
-            request=request,
+            method="POST",
+            path=f"/internal/v1/jobs/{job_id}/cancel",
             request_id=request.state.request_id,
             caller_id=user.user_id,
         )
         return Response(
-            content=response.body,
+            content=response.content,
             status_code=response.status_code,
             headers=dict(response.headers),
             media_type="application/json",
@@ -286,18 +269,12 @@ async def get_job_tests(
     request.state.upstream_service = "artifact"
 
     try:
-        response = await proxy.forward_request(
+        return await proxy.forward_request(
             service="artifact",
             path=f"/internal/v1/artifacts/{job_id}/tests",
             request=request,
             request_id=request.state.request_id,
             caller_id=user.user_id,
-        )
-        return Response(
-            content=response.body,
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            media_type="application/json",
         )
     except (UpstreamTimeout, ServiceUnavailable, ProxyError) as e:
         return _create_error_response(
@@ -320,18 +297,12 @@ async def get_job_report(
     request.state.upstream_service = "artifact"
 
     try:
-        response = await proxy.forward_request(
+        return await proxy.forward_request(
             service="artifact",
             path=f"/internal/v1/artifacts/{job_id}/report",
             request=request,
             request_id=request.state.request_id,
             caller_id=user.user_id,
-        )
-        return Response(
-            content=response.body,
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            media_type="application/json",
         )
     except (UpstreamTimeout, ServiceUnavailable, ProxyError) as e:
         return _create_error_response(
@@ -363,17 +334,12 @@ async def export_job_report(
             caller_id=user.user_id,
         )
 
-        # Set appropriate content type for binary response
+        # Override content type and add disposition header for downloads
         content_type = "application/pdf" if format == "pdf" else "text/csv"
+        response.media_type = content_type
+        response.headers["Content-Disposition"] = f'attachment; filename="report-{job_id}.{format}"'
 
-        return Response(
-            content=response.body,
-            status_code=response.status_code,
-            media_type=content_type,
-            headers={
-                "Content-Disposition": f'attachment; filename="report-{job_id}.{format}"',
-            },
-        )
+        return response
     except (UpstreamTimeout, ServiceUnavailable, ProxyError) as e:
         return _create_error_response(
             request, 502, "UPSTREAM_ERROR", str(e)

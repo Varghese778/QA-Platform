@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     max_list_limit: int = 1000
 
     model_config = {
-        "env_prefix": "EXECUTION_ENGINE_",
+        "env_prefix": "EXECUTION_",
         "env_file": ".env",
         "extra": "ignore",
     }

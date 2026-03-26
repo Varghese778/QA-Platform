@@ -30,9 +30,9 @@ class Settings(BaseSettings):
     # Downstream Services
     multi_agent_engine_url: str = "http://localhost:8010"
     memory_layer_url: str = "http://localhost:8011"
-    artifact_storage_url: str = "http://localhost:8002"
-    execution_engine_url: str = "http://localhost:8012"
-    async_processing_url: str = "http://localhost:8003"
+    artifact_storage_url: str = "http://localhost:8012"
+    execution_engine_url: str = "http://localhost:8013"
+    async_processing_url: str = "http://localhost:8014"
 
     # Timeouts (seconds)
     default_job_timeout_seconds: int = 1800  # 30 minutes

@@ -289,7 +289,7 @@ class Relationship(Base):
     )
 
     # Metadata
-    metadata: Mapped[Optional[dict]] = mapped_column(
+    relationship_metadata: Mapped[Optional[dict]] = mapped_column(
         JSON,
         nullable=True,
         comment="Additional relationship attributes",

@@ -98,7 +98,7 @@ class ArtifactRecord(Base):
         comment="Classification labels",
     )
 
-    metadata: Mapped[Optional[dict]] = mapped_column(
+    artifact_metadata: Mapped[Optional[dict]] = mapped_column(
         JSON,
         nullable=True,
         comment="Custom application metadata",

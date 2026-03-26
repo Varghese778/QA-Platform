@@ -29,12 +29,17 @@ class Settings(BaseSettings):
     memory_layer_url: str = "http://localhost:8011"
 
     # LLM Configuration
-    llm_provider: str = "mock"  # mock, openai, anthropic
+    llm_provider: str = "vertex-ai"  # mock, openai, anthropic, vertex-ai
     llm_api_key: Optional[str] = Field(default=None, description="LLM API key (from secret manager)")
-    llm_default_model: str = "gpt-4"
+    llm_default_model: str = "gemini-1.5-pro"
     llm_timeout_seconds: int = 90
     llm_max_retries: int = 3
     llm_retry_backoff_seconds: list = [10, 30, 90]
+
+    # Google Cloud / Vertex AI Configuration
+    gcp_project_id: Optional[str] = Field(default=None, description="GCP Project ID for Vertex AI")
+    gcp_location: str = "us-central1"  # Vertex AI location
+    google_application_credentials: str = "/app/application_default_credentials.json"
 
     # Task Configuration
     default_task_timeout_seconds: int = 300
@@ -72,7 +77,7 @@ class Settings(BaseSettings):
     )
 
     model_config = {
-        "env_prefix": "AGENT_ENGINE_",
+        "env_prefix": "AGENT_",
         "env_file": ".env",
         "extra": "ignore",
     }

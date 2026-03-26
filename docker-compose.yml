@@ -1,0 +1,272 @@
+
+services:
+  # Infrastructure Services
+  postgres:
+    image: postgres:15-alpine
+    container_name: qa-platform-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: qa_platform
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - qa-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: qa-platform-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - qa-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # Backend Microservices
+  auth-service:
+    build:
+      context: ./auth_service
+      dockerfile: Dockerfile
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    container_name: qa-platform-auth
+    environment:
+      AUTH_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/qa_platform
+      AUTH_REDIS_URL: redis://redis:6379/0
+      AUTH_DEBUG: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - qa-network
+    restart: unless-stopped
+
+  orchestrator-service:
+    build:
+      context: ./orchestrator_service
+      dockerfile: Dockerfile
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    container_name: qa-platform-orchestrator
+    environment:
+      ORCHESTRATOR_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/qa_platform
+      ORCHESTRATOR_REDIS_URL: redis://redis:6379/1
+      ORCHESTRATOR_MULTI_AGENT_ENGINE_URL: http://multi-agent-engine:8000
+      ORCHESTRATOR_MEMORY_LAYER_URL: http://memory-layer:8000
+      ORCHESTRATOR_ARTIFACT_STORAGE_URL: http://artifact-storage:8000
+      ORCHESTRATOR_EXECUTION_ENGINE_URL: http://execution-engine:8000
+      ORCHESTRATOR_ASYNC_PROCESSING_URL: http://async-processing:8000
+      ORCHESTRATOR_DEBUG: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - qa-network
+    restart: unless-stopped
+
+  multi-agent-engine:
+    build:
+      context: ./multi_agent_engine
+      dockerfile: Dockerfile
+    container_name: qa-platform-multi-agent
+    environment:
+      AGENT_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/qa_platform
+      AGENT_REDIS_URL: redis://redis:6379/2
+      AGENT_MEMORY_LAYER_URL: http://memory-layer:8000
+      AGENT_DEBUG: "false"
+      AGENT_LLM_PROVIDER: "vertex-ai"
+      AGENT_LLM_DEFAULT_MODEL: "gemini-1.5-flash"
+      AGENT_GCP_PROJECT_ID: "sightbridge-hackathon-2"
+      AGENT_GCP_LOCATION: "us-central1"
+      AGENT_GOOGLE_APPLICATION_CREDENTIALS: "/app/application_default_credentials.json"
+      GOOGLE_APPLICATION_CREDENTIALS: "/app/application_default_credentials.json"
+    volumes:
+      - ./application_default_credentials.json:/app/application_default_credentials.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - qa-network
+    restart: unless-stopped
+
+  memory-layer:
+    build:
+      context: ./memory_layer
+      dockerfile: Dockerfile
+    container_name: qa-platform-memory
+    environment:
+      MEMORY_LAYER_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/qa_platform
+      MEMORY_LAYER_REDIS_URL: redis://redis:6379/3
+      MEMORY_LAYER_DEBUG: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - qa-network
+    restart: unless-stopped
+
+  artifact-storage:
+    build:
+      context: ./artifact_storage
+      dockerfile: Dockerfile
+    container_name: qa-platform-artifacts
+    environment:
+      ARTIFACT_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/qa_platform
+      ARTIFACT_REDIS_URL: redis://redis:6379/4
+      ARTIFACT_STORAGE_BACKEND: local
+      ARTIFACT_LOCAL_STORAGE_PATH: /app/storage
+      ARTIFACT_DEBUG: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - artifact_storage:/app/storage
+    networks:
+      - qa-network
+    restart: unless-stopped
+
+  execution-engine:
+    build:
+      context: ./execution_engine
+      dockerfile: Dockerfile
+    container_name: qa-platform-execution
+    environment:
+      EXECUTION_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/qa_platform
+      EXECUTION_REDIS_URL: redis://redis:6379/5
+      EXECUTION_ARTIFACT_STORAGE_URL: http://artifact-storage:8000
+      EXECUTION_MEMORY_LAYER_URL: http://memory-layer:8000
+      EXECUTION_DEBUG: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - qa-network
+    restart: unless-stopped
+
+  async-processing:
+    build:
+      context: ./async_processing
+      dockerfile: Dockerfile
+    container_name: qa-platform-async
+    environment:
+      ASYNC_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/qa_platform
+      ASYNC_REDIS_URL: redis://redis:6379/6
+      ASYNC_STREAM_NAME: qa:events
+      ASYNC_DEBUG: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - qa-network
+    restart: unless-stopped
+
+  observability:
+    build:
+      context: ./observability
+      dockerfile: Dockerfile
+    container_name: qa-platform-observability
+    environment:
+      OBSERVABILITY_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/qa_platform
+      OBSERVABILITY_DEBUG: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - qa-network
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: ./api_gateway
+      dockerfile: Dockerfile
+    container_name: qa-platform-gateway
+    environment:
+      GATEWAY_REDIS_URL: redis://redis:6379/7
+      GATEWAY_JWKS_URL: http://auth-service:8000/auth/v1/.well-known/jwks.json
+      GATEWAY_AUTH_SERVICE_URL: http://auth-service:8000
+      GATEWAY_ORCHESTRATOR_SERVICE_URL: http://orchestrator-service:8000
+      GATEWAY_ARTIFACT_SERVICE_URL: http://artifact-storage:8000
+      GATEWAY_ASYNC_SERVICE_URL: http://async-processing:8000
+      GATEWAY_CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost
+      AGENT_JIRA_URL: ${AGENT_JIRA_URL:-https://srijan2026-mvp-test.atlassian.net}
+      AGENT_JIRA_USER: ${AGENT_JIRA_USER:-sharingum12@gmail.com}
+      AGENT_JIRA_TOKEN: ${AGENT_JIRA_TOKEN:-your_jira_token_here}
+      GATEWAY_DEBUG: "false"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      orchestrator-service:
+        condition: service_started
+      artifact-storage:
+        condition: service_started
+      async-processing:
+        condition: service_started
+    networks:
+      - qa-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend-dashboard:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8080/api/v1
+        VITE_WS_BASE_URL: ws://localhost:8080/ws/v1
+    container_name: qa-platform-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - qa-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  artifact_storage:
+    driver: local
+
+networks:
+  qa-network:
+    driver: bridge
+    name: qa-network

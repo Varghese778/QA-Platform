@@ -179,3 +179,72 @@ async def health_check(
         agents_online=online_count,
         total_queue_depth=total_depth,
     )
+
+
+from pydantic import BaseModel
+class DemoTestRequest(BaseModel):
+    user_story: str
+    story_title: str
+
+@router.post("/generate-demo-tests")
+async def generate_demo_tests(request: DemoTestRequest):
+    """
+    Direct synchronous endpoint for demo flow to bypass the async queue
+    and get real AI-generated test cases instantly.
+    """
+    from multi_agent_engine.agents.llm_client import LLMClient
+    
+    # We use a combined prompt for speed instead of the full 6-agent chain
+    system_prompt = """You are an expert QA TestGeneratorAgent.
+Your task is to generate comprehensive test cases based on the provided user story.
+
+You MUST respond with valid JSON matching exactly this schema:
+{
+    "test_cases": [
+        {
+            "test_id": "uuid-string (generate a random uuid4)",
+            "title": "Short descriptive title",
+            "status": "PASS",
+            "preconditions": ["List of preconditions"],
+            "steps": [
+                {
+                    "step_number": 1,
+                    "action": "Description of action",
+                    "expected_result": "Description of expected result"
+                }
+            ],
+            "expected_result": "Overall expected result",
+            "tags": ["functional", "ui", "smoke", etc]
+        }
+    ]
+}
+
+Rules:
+- Generate exactly 5-8 high-quality tests
+- Include functional, edge case, and negative tests
+- Make steps highly specific to the user story provided
+- Return ONLY valid JSON, no markdown fences or other text.
+"""
+    
+    user_prompt = f"User Story Title: {request.story_title}\n\nDescription: {request.user_story}"
+    
+    try:
+        client = LLMClient()
+        response = await client.generate(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            timeout=45,
+            temperature=0.7
+        )
+        
+        if not response.success:
+            logger.error(f"Vertex AI failed: {response.error}")
+            raise HTTPException(status_code=500, detail=response.error)
+            
+        import json
+        data = json.loads(response.content)
+        return {"tests": data.get("test_cases", [])}
+        
+    except Exception as e:
+        logger.error(f"Generate demo tests failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
