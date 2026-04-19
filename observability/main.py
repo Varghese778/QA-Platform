@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 
 from observability import __version__
 from observability.config import get_settings
-from observability.database import init_db, get_db_session
+from observability.database import init_db, get_db_session, async_session_factory
 from observability.routes import observability_router
 from observability.services.alert_engine import AlertEngine
 
@@ -43,12 +43,13 @@ async def lifespan(app: FastAPI):
         logger.info("Starting alert evaluation loop")
         while True:
             try:
-                async with get_db_session() as db:
+                # Use the session maker directly since get_db_session is an async generator
+                async with async_session_factory() as db:
                     engine = AlertEngine(db)
                     count = await engine.evaluate_rules()
                     if count > 0:
                         logger.info(f"Alert evaluator: created {count} alerts")
-                    await asyncio.sleep(settings.alert_check_interval_seconds)
+                await asyncio.sleep(settings.alert_check_interval_seconds)
             except asyncio.CancelledError:
                 logger.info("Alert evaluator cancelled")
                 break

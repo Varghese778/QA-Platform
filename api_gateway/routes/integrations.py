@@ -385,10 +385,14 @@ async def list_jira_issues(request: Request):
     if JIRA_URL and JIRA_USER and JIRA_TOKEN:
         use_mock_fallback = False  # Real Jira is configured, don't use mock
         try:
+            # Get project key from environment, default to SCRUM
+            project_key = os.environ.get("AGENT_JIRA_PROJECT_KEY", "SCRUM")
             auth = base64.b64encode(f"{JIRA_USER}:{JIRA_TOKEN}".encode()).decode()
             async with httpx.AsyncClient() as client:
+                # Query must be bounded with project filter - Jira Cloud requires this
+                jql = f"project = {project_key} order by created DESC"
                 res = await client.get(
-                    f"{JIRA_URL.rstrip('/')}/rest/api/3/search/jql?jql=assignee=currentUser()%20order%20by%20created%20DESC&maxResults=10&fields=summary,status,issuetype,priority,labels",
+                    f"{JIRA_URL.rstrip('/')}/rest/api/3/search/jql?jql={jql}&maxResults=10&fields=summary,status,issuetype,priority,labels",
                     headers={"Authorization": f"Basic {auth}", "Accept": "application/json"},
                     timeout=10.0
                 )
@@ -410,8 +414,8 @@ async def list_jira_issues(request: Request):
         except Exception as e:
             logger.error(f"Failed to list issues from Jira API: {e}")
             
-    # Only use mock data if Jira is not configured
-    if use_mock_fallback and not issues:
+    # Use mock data if Jira is not configured or if API returned no issues
+    if use_mock_fallback or not issues:
         issues = [
             {
                 "key": v["key"],
